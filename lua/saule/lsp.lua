@@ -4,7 +4,8 @@
 -- The server binary is resolved by `saule.toolchain`, in the same order as the
 -- IntelliJ plugin and the VS Code extension: `$SAULE_LSP_PATH`, then an
 -- explicit path, then the Cargo build output found by walking up from the
--- current file, then `$PATH`. No install step is needed inside this repo.
+-- current file, then `$PATH`. No install step is needed inside a Saule
+-- checkout that has been built.
 --
 -- Usage from NvChad (`lua/configs/lspconfig.lua`):
 --
@@ -17,13 +18,14 @@ local toolchain = require("saule.toolchain")
 
 local M = {}
 
---- Path to the Saule repository root that this Lua module ships from.
---- Derived from the location of this very file:
---- `<repo>/editors/nvim/lua/saule/lsp.lua` → strip the trailing five components.
+--- Where to start walking up from when nothing explicit is configured.
+--- The plugin used to live inside the Saule repository, so it could derive the
+--- checkout from its own file path; installed from its own repository it sits
+--- wherever the plugin manager put it, which says nothing about the project.
+--- The current buffer's directory does — and it is what `lsp/saule.lua` and
+--- the other editors already search from.
 local function default_repo()
-  local this = debug.getinfo(1, "S").source:sub(2) -- drop leading "@"
-  -- Walk up: lsp.lua → saule → lua → nvim → editors → <repo>
-  return vim.fn.fnamemodify(this, ":p:h:h:h:h:h")
+  return toolchain.start_dir(0)
 end
 
 --- Resolve the server command, honouring an explicit `profile` preference
@@ -55,7 +57,7 @@ end
 
 --- Register and start the Saule language server.
 ---@param opts? table  Options:
----   * `repo`          — where to start searching (default: this checkout)
+---   * `repo`          — where to start searching (default: the buffer's dir)
 ---   * `profile`       — prefer "release" or "debug" build output
 ---   * `cmd`           — fully override the server command
 ---   * `on_attach`     — buffer-local keymaps etc.

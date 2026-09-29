@@ -1,5 +1,5 @@
 -- The indent model is pure text-in / levels-out, so it is tested without an
--- editor. Run from `editors/nvim`:
+-- editor. Run from the repository root:
 --
 --   lua tests/indent_spec.lua
 --

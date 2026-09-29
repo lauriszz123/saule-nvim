@@ -1,5 +1,5 @@
 -- The project-style model is pure text-in / options-out, so it is tested
--- without an editor. Run from `editors/nvim`:
+-- without an editor. Run from the repository root:
 --
 --   lua tests/style_spec.lua
 --

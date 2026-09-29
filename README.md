@@ -1,7 +1,11 @@
 # Saule for Neovim / NvChad
 
-This folder ships everything Neovim needs, consumable directly from this repo —
-no copying into `~/.config/nvim/`:
+Neovim support for the [Saule](https://github.com/lauriszz123/saule)
+programming language (`.sau`): syntax, indentation, and a client for the
+`saule-lsp` language server.
+
+This repository is a Neovim plugin, laid out the way plugin managers expect —
+point one at `lauriszz123/saule-nvim` and you are done.
 
 1. **Syntax + filetype detection** — `ftdetect/`, `ftplugin/`, `syntax/`.
 2. **Indentation** — `indent/`, backed by the shared indent model in
@@ -11,25 +15,26 @@ no copying into `~/.config/nvim/`:
    `saule-lsp` for you.
 4. **Run commands** — `:SauleRun`, `:SauleRunFile`.
 
-Behaviour is kept at parity with the IntelliJ plugin and the VS Code
-extension; see [Editor parity](#editor-parity) for the details.
+Behaviour is kept at parity with the [IntelliJ
+plugin](https://github.com/lauriszz123/saule-intellij) and the [VS Code
+extension](https://github.com/lauriszz123/saule-vscode); see [Editor
+parity](#editor-parity) for the details.
 
-## 1. Build the toolchain (one time)
+## 1. Install the toolchain (one time)
 
-From the repo root:
+The plugin needs the `saule-lsp` binary. The installer puts it, and the `saule`
+CLI, in `~/.saule/bin` and adds that to your `PATH`:
 
 ```bash
-cargo build --release
+curl -fsSL https://lauriszz123.github.io/saule/install.sh | sh
 ```
 
-That's it — the Lua helpers find `target/release/saule-lsp` themselves by
-walking up from the file you're editing.
+If you build the language from source instead, `cargo build --release` in a
+[saule](https://github.com/lauriszz123/saule) checkout produces both binaries
+in `target/release/`; the Lua helpers find them by walking up from the file you
+are editing, so nothing else is needed while you work inside that checkout.
 
-## 2. Load the plugin from this folder
-
-Use whichever plugin manager you already have configured. The point is to add
-this folder to Neovim's runtimepath so the `saule` filetype, the syntax and
-indent files, and `require("saule.lsp")` all resolve.
+## 2. Install the plugin
 
 ### lazy.nvim
 
@@ -39,14 +44,31 @@ In your NvChad `lua/plugins/init.lua` (or wherever you list extra plugins):
 return {
   -- existing entries …
   {
-    dir = "~/Documents/rust/saule/editors/nvim",
-    name = "saule.vim",
+    "lauriszz123/saule-nvim",
     ft = "saule",
   },
 }
 ```
 
-Adjust the `dir` path to wherever you cloned the repo.
+### packer.nvim
+
+```lua
+use { "lauriszz123/saule-nvim", ft = "saule" }
+```
+
+### From a local clone
+
+Any manager that takes a directory works too — the point is to get this
+repository onto Neovim's runtimepath so the `saule` filetype, the syntax and
+indent files, and `require("saule.lsp")` all resolve:
+
+```lua
+{
+  dir = "~/Documents/rust/saule-nvim",
+  name = "saule-nvim",
+  ft = "saule",
+}
+```
 
 ## 3. Enable the LSP
 
@@ -91,7 +113,7 @@ same project:
    sub-folder (say `examples/todo-app`) and still find the workspace-root build
    output — and the directory holding that `target/` becomes the server's
    working directory.
-4. `$PATH`.
+4. `$PATH` — where the installer puts it.
 
 If nothing is found you get a warning explaining how to build it; syntax
 highlighting and indentation keep working regardless.
@@ -198,8 +220,12 @@ server is resolved, and run it from the workspace root.
 
 `lua/saule/indent.lua` is a port of the IntelliJ plugin's `SauleIndentModel`
 and shares its test corpus with the VS Code extension's `src/indent.ts`. All
-three are derived from the printer in `crates/saule-fmt/src/lib.rs`. If you
-change one, change all of them and re-run every suite:
+three are derived from the printer in `crates/saule-fmt/src/lib.rs` in the
+[saule](https://github.com/lauriszz123/saule) repository. The three clients
+live in separate repositories now, so changing one is a change to all three:
+update [saule-intellij](https://github.com/lauriszz123/saule-intellij) and
+[saule-vscode](https://github.com/lauriszz123/saule-vscode) alongside it and
+re-run every suite.
 
 ```bash
 lua tests/indent_spec.lua
@@ -218,3 +244,7 @@ lua tests/style_spec.lua
 For more accurate highlighting, a `tree-sitter-saule` grammar can later replace
 the Vim regex highlighter; nvim-treesitter would then auto-pick it up. The
 indent model is independent of it and would stay as-is.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

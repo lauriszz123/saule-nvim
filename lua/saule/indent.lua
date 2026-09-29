@@ -5,11 +5,12 @@
 -- pressing Enter, for `=`, and for the auto-dedent of `end`.
 --
 -- This is a port of the IntelliJ plugin's `SauleIndentModel` (see
--- `editors/intellij/.../format/SauleIndentModel.kt`) and of the VS Code
--- extension's `src/indent.ts`, kept deliberately comparable with both so the
--- three editors indent identically. All are in turn derived from the printer
--- in `crates/saule-fmt/src/lib.rs`; keep them in step or the editors and
--- `saule fmt` will disagree.
+-- `saule-intellij`, `src/main/kotlin/com/saule/lang/format/SauleIndentModel.kt`)
+-- and of the VS Code extension's `src/indent.ts` (`saule-vscode`), kept
+-- deliberately comparable with both so the three editors indent identically.
+-- All are in turn derived from the printer in `crates/saule-fmt/src/lib.rs` in
+-- the `saule` repository; keep them in step or the editors and `saule fmt`
+-- will disagree.
 --
 -- The model half of this file is pure Lua — no `vim.*` — so it can be tested
 -- with a plain `lua` interpreter. Only `M.indentexpr` touches the editor.
