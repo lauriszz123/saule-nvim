@@ -72,7 +72,33 @@ indent files, and `require("saule.lsp")` all resolve:
 }
 ```
 
-## 3. Enable the LSP
+## 3. File icon (optional)
+
+A terminal cannot draw the logo, so the closest thing Neovim has is a glyph and
+a colour in the file tree, tabline, statusline and pickers. `nvim-web-devicons`
+has no entry for `.sau`, so it falls through to the default grey file glyph.
+Add one in your devicons spec — not here — because the tree draws the icon
+while you are still browsing a directory, before any `.sau` file is open:
+
+```lua
+{
+  "nvim-tree/nvim-web-devicons",
+  opts = {
+    override_by_extension = {
+      sau = { icon = "\u{F185}", color = "#F7A224", cterm_color = "214", name = "Saule" },
+    },
+  },
+}
+```
+
+U+F185 is the Font Awesome sun, present in every Nerd Font patch. It is written
+as an escape rather than the glyph itself because it lives in the Private Use
+Area, where editors and clipboards that normalise text quietly eat it. On an
+unpatched font use `icon = "S"`. The same values are exported as
+`require("saule.devicons").icon` if you would rather not paste them, and
+`require("saule.devicons").setup()` registers them for you.
+
+## 4. Enable the LSP
 
 ### Neovim 0.11+ (built-in)
 
