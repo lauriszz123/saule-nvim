@@ -1,3 +1,5 @@
+<img src="assets/saule-logo.png" alt="Saule" width="128" align="right">
+
 # Saule for Neovim / NvChad
 
 Neovim support for the [Saule](https://github.com/lauriszz123/saule)
