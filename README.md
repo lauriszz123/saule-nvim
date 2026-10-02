@@ -72,33 +72,7 @@ indent files, and `require("saule.lsp")` all resolve:
 }
 ```
 
-## 3. File icon (optional)
-
-A terminal cannot draw the logo, so the closest thing Neovim has is a glyph and
-a colour in the file tree, tabline, statusline and pickers. `nvim-web-devicons`
-has no entry for `.sau`, so it falls through to the default grey file glyph.
-Add one in your devicons spec — not here — because the tree draws the icon
-while you are still browsing a directory, before any `.sau` file is open:
-
-```lua
-{
-  "nvim-tree/nvim-web-devicons",
-  opts = {
-    override_by_extension = {
-      sau = { icon = "\u{F185}", color = "#F7A224", cterm_color = "214", name = "Saule" },
-    },
-  },
-}
-```
-
-U+F185 is the Font Awesome sun, present in every Nerd Font patch. It is written
-as an escape rather than the glyph itself because it lives in the Private Use
-Area, where editors and clipboards that normalise text quietly eat it. On an
-unpatched font use `icon = "S"`. The same values are exported as
-`require("saule.devicons").icon` if you would rather not paste them, and
-`require("saule.devicons").setup()` registers them for you.
-
-## 4. Enable the LSP
+## 3. Enable the LSP
 
 ### Neovim 0.11+ (built-in)
 
@@ -127,6 +101,36 @@ The helper will:
   same keymaps and completion source as the rest of your LSP setup.
 * Detect the project root via `saule.config` / `Cargo.toml` / `.git`, with
   `single_file_support = true` for scratch files.
+
+## File icon
+
+A terminal cannot draw the logo, so the nearest thing Neovim has is a glyph and
+a colour in the file tree, tabline, statusline and pickers. `nvim-web-devicons`
+ships no entry for `.sau`, so without help it falls through to the default grey
+file glyph.
+
+**This is automatic — there is nothing to add to your config.** `lazy.lua` at
+the root of this repository is a lazy.nvim package spec, read on install, and
+it registers the icon once devicons has loaded. If you do not use devicons at
+all, nothing happens.
+
+The glyph is U+F185, the Font Awesome sun, present in every Nerd Font patch. On
+an unpatched font you will get a replacement box; override it with the snippet
+below.
+
+Not on lazy.nvim, or want different values:
+
+```lua
+require("saule.devicons").setup()                     -- register the defaults
+require("saule.devicons").icon                        -- { icon, color, cterm_color, name }
+```
+
+```lua
+-- or set your own, anywhere after devicons is up
+require("nvim-web-devicons").set_icon({
+  sau = { icon = "S", color = "#F7A224", cterm_color = "214", name = "Saule" },
+})
+```
 
 ## Finding the toolchain
 
