@@ -369,8 +369,10 @@ end
 
 --- `indentexpr` for Saule buffers: the indent, in columns, of `v:lnum`.
 ---
---- One continuation is two indents — the ratio the IntelliJ code style
---- defaults to (indent 2, continuation 4) and the one `saule fmt` prints.
+--- One continuation is one indent, because that is what `saule fmt` prints:
+--- every still-open bracket steps its contents in by a single level. Weighting
+--- it double put the caret far to the right of where the formatter later
+--- moved the line, inside any call or table literal.
 function M.indentexpr()
   local lnum = vim.v.lnum
   local lines = vim.api.nvim_buf_get_lines(0, 0, lnum, false)
@@ -386,7 +388,7 @@ function M.indentexpr()
     M.indent_for_line(text, line_start, line_start + #(lines[lnum] or ""))
 
   local sw = vim.fn.shiftwidth()
-  return blocks * sw + continuations * sw * 2
+  return (blocks + continuations) * sw
 end
 
 return M
