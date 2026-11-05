@@ -30,7 +30,19 @@ local M = {}
 -- `LOOP_HEADER` is a `for` / `while` block whose header has not reached its
 -- `do` yet. It is a block like any other — it just remembers that the next
 -- `do` belongs to the header and so must not open a second one.
+--
+-- The rest are what keep this in step with `saule fmt`:
+--
+-- `FN_HEADER` is a `fn` whose parameter list has not closed. Its body has not
+-- started, so it is no level yet.
+--
+-- `INLINE_CASE` is `case … then value`. An arm on one line steps nothing in.
+--
+-- `BRACKET` is open with nothing decided. `SETTLED_BRACKET` was followed by a
+-- line break, so its contents are one level in. `HUGGED_BRACKET` holds a block
+-- on the line it opened on (`f(fn()`) and stays no level at all.
 local BLOCK, LOOP_HEADER, INTERFACE, CASE, BRACKET = 1, 2, 3, 4, 5
+local FN_HEADER, INLINE_CASE, SETTLED_BRACKET, HUGGED_BRACKET = 6, 7, 8, 9
 
 local function set(list)
   local out = {}
@@ -193,7 +205,34 @@ end
 
 -- ── the stack machine ───────────────────────────────────────────────────────
 
-local function apply(word, previous, stack)
+local function is_bracket(frame)
+  return frame == BRACKET or frame == SETTLED_BRACKET or frame == HUGGED_BRACKET
+end
+
+--- Turn the undecided brackets on top of the stack into `to`.
+local function decide_brackets(stack, to)
+  local i = #stack
+  while i > 0 and stack[i] == BRACKET do
+    stack[i] = to
+    i = i - 1
+  end
+end
+
+--- Push a frame that opens a block, which hugs any bracket still undecided.
+local function push_block(stack, frame)
+  decide_brackets(stack, HUGGED_BRACKET)
+  stack[#stack + 1] = frame
+end
+
+--- Whether a line break lies between two token starts.
+local function line_break_between(text, from, to)
+  return text:sub(from, to - 1):find("\n", 1, true) ~= nil
+end
+
+local function apply(word, previous, before_previous, stack, new_line)
+  if previous == "then" and not new_line and stack[#stack] == CASE then
+    stack[#stack] = INLINE_CASE
+  end
   local top = stack[#stack]
   if word == "interface" then
     stack[#stack + 1] = INTERFACE
@@ -201,13 +240,23 @@ local function apply(word, previous, stack)
     -- Also covers lambdas — `fn(x) … end` is a block like any other. A `fn` in
     -- type position (`f: fn(T) -> U`) opens nothing: it is a type, it has no
     -- body, and no `end` will ever come for it.
-    if top ~= INTERFACE and not (previous and TYPE_POSITION[previous]) then
-      stack[#stack + 1] = BLOCK
+    -- `name: fn(x) … end` in a call or a table is a value, not an annotation.
+    -- Only a parameter list says `name: fn(T) -> U` and means a type.
+    local below = stack[#stack - 1]
+    local named_value = previous == ":" and is_bracket(top) and below ~= FN_HEADER and below ~= INTERFACE
+    -- `(fn() -> T)?` after a `:` is a type in brackets.
+    local bracketed_type = previous == "(" and before_previous and TYPE_POSITION[before_previous]
+    if
+      top ~= INTERFACE
+      and not bracketed_type
+      and (named_value or not (previous and TYPE_POSITION[previous]))
+    then
+      push_block(stack, FN_HEADER)
     end
   elseif BLOCK_OPENERS[word] then
-    stack[#stack + 1] = BLOCK
+    push_block(stack, BLOCK)
   elseif LOOP_OPENERS[word] then
-    stack[#stack + 1] = LOOP_HEADER
+    push_block(stack, LOOP_HEADER)
   elseif word == "do" then
     -- Closing a loop header costs nothing — `for`/`while` opened the block
     -- already — but a `do` anywhere else is a trailing block, and that one is
@@ -215,7 +264,7 @@ local function apply(word, previous, stack)
     if top == LOOP_HEADER then
       stack[#stack] = BLOCK
     else
-      stack[#stack + 1] = BLOCK
+      push_block(stack, BLOCK)
     end
   elseif CLOSERS[word] then
     -- Pop one real block. Any `case` arms — and any brackets left open by
@@ -224,6 +273,7 @@ local function apply(word, previous, stack)
     while
       #stack > 0
       and stack[#stack] ~= BLOCK
+      and stack[#stack] ~= FN_HEADER
       and stack[#stack] ~= LOOP_HEADER
       and stack[#stack] ~= INTERFACE
     do
@@ -233,15 +283,18 @@ local function apply(word, previous, stack)
       stack[#stack] = nil
     end
   elseif word == "case" then
-    if top == CASE then
+    if top == CASE or top == INLINE_CASE then
       stack[#stack] = nil
     end
     stack[#stack + 1] = CASE
   elseif OPEN_BRACKETS[word] then
     stack[#stack + 1] = BRACKET
   elseif CLOSE_BRACKETS[word] then
-    if top == BRACKET then
+    if is_bracket(top) then
       stack[#stack] = nil
+      if stack[#stack] == FN_HEADER then
+        stack[#stack] = BLOCK
+      end
     end
   end
 end
@@ -269,24 +322,32 @@ end
 --- line that is already (partly) typed as well as for an empty one.
 function M.indent_for_line(text, line_start, line_end)
   local stack = {}
-  local first_on_line, previous
+  local first_on_line, previous, before_previous
+  local previous_start = 1
 
   for _, token in ipairs(tokens(text, line_end - 1)) do
+    local new_line = line_break_between(text, previous_start, token.start)
+    if new_line then
+      decide_brackets(stack, SETTLED_BRACKET)
+    end
     if token.start >= line_start then
       first_on_line = token.word
       break
     end
-    apply(token.word, previous, stack)
+    apply(token.word, previous, before_previous, stack, new_line)
+    before_previous = previous
     previous = token.word
+    previous_start = token.start
   end
 
-  local blocks = 0
+  local blocks, brackets = 0, 0
   for _, frame in ipairs(stack) do
-    if frame ~= BRACKET then
+    if frame == BRACKET or frame == SETTLED_BRACKET then
+      brackets = brackets + 1
+    elseif frame ~= HUGGED_BRACKET and frame ~= FN_HEADER and frame ~= INLINE_CASE then
       blocks = blocks + 1
     end
   end
-  local brackets = #stack - blocks
   local top = stack[#stack]
 
   local block_dedent, bracket_dedent = 0, 0
@@ -303,7 +364,7 @@ function M.indent_for_line(text, line_start, line_end)
       block_dedent = 1
     end
   elseif CLOSE_BRACKETS[first_on_line] then
-    if top == BRACKET then
+    if top == BRACKET or top == SETTLED_BRACKET then
       bracket_dedent = 1
     end
   end
@@ -329,14 +390,21 @@ local AMBIGUOUS_OPENERS = set({ "fn", "do" })
 --- shared stack machine either way — a keyword opens a block if and only if
 --- applying it pushes a frame.
 function M.false_openers(text)
-  local stack, previous, out = {}, nil, {}
+  local stack, previous, before_previous, out = {}, nil, nil, {}
+  local previous_start = 1
   for _, token in ipairs(tokens(text, #text)) do
+    local new_line = line_break_between(text, previous_start, token.start)
+    if new_line then
+      decide_brackets(stack, SETTLED_BRACKET)
+    end
     local before = #stack
-    apply(token.word, previous, stack)
+    apply(token.word, previous, before_previous, stack, new_line)
     if #stack == before and AMBIGUOUS_OPENERS[token.word] then
       out[token.start] = true
     end
+    before_previous = previous
     previous = token.word
+    previous_start = token.start
   end
   return out
 end

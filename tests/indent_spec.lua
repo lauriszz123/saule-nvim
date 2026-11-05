@@ -394,10 +394,30 @@ test("a new line after fn-typed signatures starts at column zero", function()
   assert_indent(0, 0, text, 9)
 end)
 
+test("agrees with saule fmt on the shared conformance program", function()
+  local file = assert(io.open("tests/fixtures/indent-conformance.sau", "rb"))
+  local text = file:read("*a"):gsub("\r\n", "\n")
+  file:close()
+  local start, number = 1, 1
+  while start <= #text do
+    local stop = text:find("\n", start, true) or (#text + 1)
+    local line = text:sub(start, stop - 1)
+    if line:find("%S") then
+      local blocks, continuations = indent.indent_for_line(text, start, stop)
+      local written = #line:match("^ *") / 2
+      checks = checks + 1
+      if blocks + continuations ~= written then
+        fail(("line %d: got %d, want %d: %s"):format(number, blocks + continuations, written, line))
+      end
+    end
+    start, number = stop + 1, number + 1
+  end
+end)
+
 test("an anonymous fn argument is still a block", function()
   -- The counter-case the type-position rule must not break: `fn` after a comma
   -- opens a real body.
-  assert_indent(1, 1, "map(xs, fn(x: integer) -> integer\n\n", 1)
+  assert_indent(1, 0, "map(xs, fn(x: integer) -> integer\n\n", 1)
 end)
 
 test("keywords inside strings and comments are ignored", function()
