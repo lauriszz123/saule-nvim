@@ -46,9 +46,9 @@ local function resolve_cmd(repo, profile)
   })
   if not located.found then
     vim.notify(
-      "saule.lsp: could not find the 'saule-lsp' executable. Build it with "
-        .. "`cargo build --release -p saule-lsp`, set `vim.g.saule_lsp_path`, "
-        .. "or add 'saule-lsp' to your PATH.",
+      "saule.lsp: could not find the 'saule-lsp' executable. Install the "
+        .. "toolchain from https://lauriszz123.github.io/saule/, or set "
+        .. "`vim.g.saule_lsp_path`.",
       vim.log.levels.WARN
     )
   end

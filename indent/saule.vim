@@ -18,6 +18,6 @@ setlocal indentexpr=v:lua.require'saule.indent'.indentexpr()
 "
 " `0=` means "re-indent when this word is typed at the start of the line";
 " `o`/`O` cover opening a line, and `!^F` keeps CTRL-F working.
-setlocal indentkeys=o,O,!^F,0=end,0=until,0=else,0=elseif,0=catch,0=case,0),0],0}
+setlocal indentkeys=o,O,!^F,0=end,0=until,0=else,0=elseif,0=catch,0=finally,0=case,0),0],0}
 
 let b:undo_indent = "setlocal indentexpr< indentkeys<"

@@ -5,8 +5,9 @@
 --
 -- The binary is resolved by `saule.toolchain`, in the same order as the
 -- IntelliJ plugin and the VS Code extension: `$SAULE_LSP_PATH`, then
--- `vim.g.saule_lsp_path` / `vim.g.saule_toolchain_dir`, then the Cargo build
--- output found by walking up from the file's directory, then `$PATH`.
+-- `vim.g.saule_lsp_path` / `vim.g.saule_toolchain_dir`, then (only with
+-- `vim.g.saule_use_project_build`) the Cargo build output found by walking up
+-- from the file's directory, then `$PATH`, then `~/.saule/bin`.
 
 local toolchain = require("saule.toolchain")
 
@@ -21,8 +22,8 @@ if not located.found then
   vim.notify(
     "saule: could not find the 'saule-lsp' executable. Syntax highlighting "
       .. "and indentation are active, but diagnostics, hover and navigation "
-      .. "are disabled. Build it with `cargo build --release -p saule-lsp`, "
-      .. "set `vim.g.saule_lsp_path`, or add 'saule-lsp' to your PATH.",
+      .. "are disabled. Install the toolchain from "
+      .. "https://lauriszz123.github.io/saule/, or set `vim.g.saule_lsp_path`.",
     vim.log.levels.WARN
   )
 end

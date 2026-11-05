@@ -53,7 +53,7 @@ local BLOCK_OPENERS = set({ "class", "enum", "if", "repeat", "try", "match" })
 local LOOP_OPENERS = set({ "while", "for" })
 
 --- Keywords that continue the enclosing block: written one level out.
-local CONTINUATIONS = set({ "else", "elseif", "catch" })
+local CONTINUATIONS = set({ "else", "elseif", "catch", "finally" })
 
 --- Keywords that close the enclosing block: also written one level out.
 local CLOSERS = set({ "end", "until" })
@@ -63,7 +63,7 @@ local CLOSERS = set({ "end", "until" })
 --- `case` is in here because a `match` arm with a block body is closed by the
 --- next `case`, not by an `end`. Typing any of these as the whole of a line is
 --- what triggers the editor's auto-dedent.
-M.DEDENT_KEYWORDS = set({ "end", "until", "else", "elseif", "catch", "case" })
+M.DEDENT_KEYWORDS = set({ "end", "until", "else", "elseif", "catch", "finally", "case" })
 
 local OPEN_BRACKETS = set({ "(", "[", "{" })
 local CLOSE_BRACKETS = set({ ")", "]", "}" })
@@ -341,7 +341,7 @@ function M.false_openers(text)
   return out
 end
 
-local MAX_KEYWORD_LENGTH = 6 -- `elseif`
+local MAX_KEYWORD_LENGTH = 7 -- `finally`
 
 --- True when the word being typed just before `offset` is the whole of its
 --- line and could change that line's indent — i.e. it is one of

@@ -313,6 +313,37 @@ test("try catch", function()
   ]])
 end)
 
+test("try catch finally", function()
+  assert_round_trips([[
+    fn f()
+      try
+        risky()
+      catch e: any
+        log(e)
+      finally
+        close()
+      end
+    end
+  ]])
+end)
+
+test("try finally", function()
+  assert_round_trips([[
+    fn f()
+      try
+        risky()
+      finally
+        close()
+      end
+    end
+  ]])
+end)
+
+test("finally is a keyword that dedents as it is typed", function()
+  local text = "try\n  risky()\n  finally"
+  assert(indent.keyword_typed_at(text, #text + 1) == true)
+end)
+
 test("lambda block body", function()
   assert_round_trips([[
     local handler = fn(x: integer)

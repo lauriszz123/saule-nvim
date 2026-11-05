@@ -40,7 +40,7 @@ setlocal endofline
 let b:match_ignorecase = 0
 let b:match_words =
       \ '\<\%(class\|interface\|enum\|if\|while\|for\|repeat\|try\|match\|fn\|do\)\>'
-      \ . ':\<\%(elseif\|else\|catch\|case\)\>'
+      \ . ':\<\%(elseif\|else\|catch\|finally\|case\)\>'
       \ . ':\<\%(end\|until\)\>'
 let b:match_skip = "v:lua.require'saule.match'.skip()"
 

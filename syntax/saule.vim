@@ -56,7 +56,7 @@ syntax match  sauleEscape      "\\." contained
 " ── Types ───────────────────────────────────────────────────────────────
 " No `function`: a function's type is its signature, written `fn(...) -> T`,
 " and `fn` is already highlighted as a declaration keyword.
-syntax keyword sauleType        integer float string boolean any
+syntax keyword sauleType        integer float string boolean any byte bytes
                               \ table userdata thread
 syntax match   sauleTypeName    "\<[A-Z][A-Za-z0-9_]*\>"
 
@@ -88,7 +88,7 @@ syntax keyword sauleConditional if else elseif then end
 syntax keyword sauleRepeat      for while repeat until
 syntax keyword sauleStructural  do in
 syntax keyword sauleReturn      return
-syntax keyword sauleStatement   break continue throw try catch
+syntax keyword sauleStatement   break continue throw try catch finally
 syntax keyword sauleMatch       match case when
 syntax keyword sauleDeclaration class interface enum fn
                               \ local static export import from as

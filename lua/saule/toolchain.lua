@@ -8,13 +8,19 @@
 --
 --   1. Environment variable override (`SAULE_LSP_PATH` / `SAULE_PATH`).
 --   2. An explicit path passed by the caller (`opts.cmd`), or `opts.dir`.
---   3. Cargo build output, walking UP from the start directory looking for
---      `target/{release,debug}/<name>`. Walking up is what lets you open a
---      sub-folder (say `examples/todo-app`) and still find the workspace-root
---      build output — and the directory holding that `target/` becomes the
---      working directory the binary is launched in.
+--   3. Only with `vim.g.saule_use_project_build` set: Cargo build output,
+--      walking UP from the start directory looking for
+--      `target/{release,debug}/<name>`. The directory holding that `target/`
+--      becomes the working directory the binary is launched in.
 --   4. `$PATH`.
---   5. The bare name, with `found = false`, so callers can surface a hint.
+--   5. The install directory (`$SAULE_HOME/bin`, else `~/.saule/bin`), for an
+--      editor started from a launcher that never read the shell's `PATH`.
+--   6. The bare name, with `found = false`, so callers can surface a hint.
+--
+-- Step 3 is opt-in because a project's files are not trusted just because a
+-- file in it was opened. Nothing stops a repository committing
+-- `target/debug/saule-lsp`, and starting it automatically would hand that
+-- repository the user's machine.
 
 local M = {}
 
@@ -50,12 +56,30 @@ local function find_upward(start, exe)
   return nil
 end
 
+--- The first match on `$PATH`, by hand rather than with `exepath()`, which also
+--- searches the current directory on Windows. A relative entry such as `.` is
+--- skipped for the same reason: it would resolve against the open project.
 local function find_on_path(exe)
-  local found = vim.fn.exepath(exe)
-  if found ~= nil and found ~= "" then
-    return found
+  local windows = vim.fn.has("win32") == 1
+  for entry in string.gmatch(vim.env.PATH or "", windows and "[^;]+" or "[^:]+") do
+    local absolute = entry:sub(1, 1) == "/" or (windows and entry:match("^%a:[/\\]") ~= nil)
+    if absolute then
+      local candidate = entry .. "/" .. exe
+      if vim.fn.executable(candidate) == 1 then
+        return candidate
+      end
+    end
   end
   return nil
+end
+
+--- `$SAULE_HOME/bin`, else `~/.saule/bin`.
+local function install_dir()
+  local home = vim.env.SAULE_HOME
+  if home == nil or home == "" then
+    home = vim.fn.expand("~/.saule")
+  end
+  return home .. "/bin"
 end
 
 --- Locate a toolchain binary.
@@ -89,10 +113,12 @@ function M.locate(base, opts)
     end
   end
 
-  -- 3. Cargo build output, walking up from the start directory.
-  local command, root = find_upward(start, exe)
-  if command then
-    return { command = command, working_dir = root, found = true }
+  -- 3. Cargo build output, walking up from the start directory, if allowed.
+  if vim.g.saule_use_project_build then
+    local command, root = find_upward(start, exe)
+    if command then
+      return { command = command, working_dir = root, found = true }
+    end
   end
 
   -- 4. $PATH.
@@ -101,7 +127,13 @@ function M.locate(base, opts)
     return { command = on_path, working_dir = start, found = true }
   end
 
-  -- 5. Nothing found.
+  -- 5. The install directory.
+  local installed = install_dir() .. "/" .. exe
+  if is_file(installed) then
+    return { command = installed, working_dir = start, found = true }
+  end
+
+  -- 6. Nothing found.
   return { command = exe, working_dir = start, found = false }
 end
 

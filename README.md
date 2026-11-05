@@ -33,8 +33,8 @@ curl -fsSL https://lauriszz123.github.io/saule/install.sh | sh
 
 If you build the language from source instead, `cargo build --release` in a
 [saule](https://github.com/lauriszz123/saule) checkout produces both binaries
-in `target/release/`; the Lua helpers find them by walking up from the file you
-are editing, so nothing else is needed while you work inside that checkout.
+in `target/release/`. To have the plugin use them while you work in that
+checkout, set `vim.g.saule_use_project_build = true` (see below).
 
 ## 2. Install the plugin
 
@@ -140,14 +140,17 @@ same project:
 
 1. `$SAULE_LSP_PATH` / `$SAULE_PATH`.
 2. `vim.g.saule_lsp_path` / `vim.g.saule_cli_path`, or `vim.g.saule_toolchain_dir`.
-3. Cargo build output, walking **up** from the file's directory looking for
-   `target/release` then `target/debug`. Walking up is what lets you open a
-   sub-folder (say `examples/todo-app`) and still find the workspace-root build
-   output — and the directory holding that `target/` becomes the server's
-   working directory.
-4. `$PATH` — where the installer puts it.
+3. Only with `vim.g.saule_use_project_build = true`: Cargo build output,
+   walking **up** from the file's directory looking for `target/release` then
+   `target/debug`.
+4. `$PATH`.
+5. `~/.saule/bin` (or `$SAULE_HOME/bin`), where the installer puts it.
 
-If nothing is found you get a warning explaining how to build it; syntax
+Step 3 is off by default because a repository can commit a `target/debug/saule-lsp`
+of its own, and opening a file should not run it. Turn it on if you work on the
+language itself.
+
+If nothing is found you get a warning explaining how to install it; syntax
 highlighting and indentation keep working regardless.
 
 ```lua
@@ -269,6 +272,7 @@ project's declared indentation exactly as the printer does:
 
 ```bash
 lua tests/style_spec.lua
+nvim -l tests/toolchain_spec.lua
 ```
 
 ## Future: tree-sitter
