@@ -131,7 +131,7 @@ test("detects what a file is already written with", function()
 end)
 
 test("a file with nothing indented has no opinion", function()
-  eq(style.detect(lines("import * from x\nclass A end")), nil, "flat file")
+  eq(style.detect(lines("from x import *\nclass A end")), nil, "flat file")
   eq(style.detect({}), nil, "empty file")
 end)
 
