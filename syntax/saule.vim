@@ -90,10 +90,10 @@ syntax keyword sauleStructural  do in
 syntax keyword sauleReturn      return
 syntax keyword sauleStatement   break continue throw try catch finally
 syntax keyword sauleMatch       match case when
-syntax keyword sauleDeclaration class interface enum fn
+syntax keyword sauleDeclaration class interface enum type fn
                               \ local static export import from as
                               \ extends implements
-syntax keyword sauleOperatorKW  and or not
+syntax keyword sauleOperatorKW  and or not is
 syntax keyword sauleBoolean     true false
 syntax keyword sauleNil         nil
 syntax keyword sauleSelf        self super

@@ -88,12 +88,14 @@ local CLOSE_BRACKETS = set({ ")", "]", "}" })
 --- compounds: with a stray block on top, the `)` closing the enclosing
 --- parameter list no longer matches a bracket frame, so that stays open too.
 ---
---- Only these four contexts qualify, and each admits nothing but a type: `:`
+--- Only these contexts qualify, and each admits nothing but a type: `:`
 --- ascribes one, `->` introduces a return type, `<` opens a generic argument
---- list, and `as` casts to one. Notably absent are `,` and `(` — an anonymous
+--- list, `as` casts to one and `is` tests against one. (The right-hand side
+--- of a `type Name = …` declaration is a type as well, but nothing about the
+--- token before a `fn` there says so: the scans track that line by line.) Notably absent are `,` and `(` — an anonymous
 --- function passed as an argument (`map(xs, fn(x) … end)`) follows those, and
 --- it really is a block.
-local TYPE_POSITION = set({ ":", "->", "<", "as" })
+local TYPE_POSITION = set({ ":", "->", "<", "as", "is" })
 
 local THREE_CHAR_OPS = set({ "...", "..=", "<<=", ">>=" })
 -- `<<` and `>>` have to be here, not just for tidiness: `<` is a
@@ -229,7 +231,7 @@ local function line_break_between(text, from, to)
   return text:sub(from, to - 1):find("\n", 1, true) ~= nil
 end
 
-local function apply(word, previous, before_previous, stack, new_line)
+local function apply(word, previous, before_previous, stack, new_line, in_alias)
   if previous == "then" and not new_line and stack[#stack] == CASE then
     stack[#stack] = INLINE_CASE
   end
@@ -246,9 +248,13 @@ local function apply(word, previous, before_previous, stack, new_line)
     local named_value = previous == ":" and is_bracket(top) and below ~= FN_HEADER and below ~= INTERFACE
     -- `(fn() -> T)?` after a `:` is a type in brackets.
     local bracketed_type = previous == "(" and before_previous and TYPE_POSITION[before_previous]
+    -- `v is not fn() -> nil`: the `not` belongs to the `is`.
+    local negated_test = previous == "not" and before_previous == "is"
     if
       top ~= INTERFACE
       and not bracketed_type
+      and not in_alias
+      and not negated_test
       and (named_value or not (previous and TYPE_POSITION[previous]))
     then
       push_block(stack, FN_HEADER)
@@ -320,10 +326,26 @@ end
 --- The line's own first token matters: `end`, `else` and friends sit one level
 --- out from the body they close, so the caller gets the right answer for a
 --- line that is already (partly) typed as well as for an empty one.
+--- Whether the scan is inside `type Name = …` once it has read `word`.
+---
+--- Every `fn` there is a type and opens nothing. An alias is one line and
+--- begins it — `type`, or `export type` — so the answer lasts until the next
+--- line break.
+local function starts_alias(word, previous, new_line, in_alias)
+  if new_line or previous == nil then
+    in_alias = false
+  end
+  if word == "type" and (new_line or previous == nil or previous == "export") then
+    in_alias = true
+  end
+  return in_alias
+end
+
 function M.indent_for_line(text, line_start, line_end)
   local stack = {}
   local first_on_line, previous, before_previous
   local previous_start = 1
+  local in_alias = false
 
   for _, token in ipairs(tokens(text, line_end - 1)) do
     local new_line = line_break_between(text, previous_start, token.start)
@@ -334,7 +356,8 @@ function M.indent_for_line(text, line_start, line_end)
       first_on_line = token.word
       break
     end
-    apply(token.word, previous, before_previous, stack, new_line)
+    in_alias = starts_alias(token.word, previous, new_line, in_alias)
+    apply(token.word, previous, before_previous, stack, new_line, in_alias)
     before_previous = previous
     previous = token.word
     previous_start = token.start
@@ -392,13 +415,15 @@ local AMBIGUOUS_OPENERS = set({ "fn", "do" })
 function M.false_openers(text)
   local stack, previous, before_previous, out = {}, nil, nil, {}
   local previous_start = 1
+  local in_alias = false
   for _, token in ipairs(tokens(text, #text)) do
     local new_line = line_break_between(text, previous_start, token.start)
     if new_line then
       decide_brackets(stack, SETTLED_BRACKET)
     end
     local before = #stack
-    apply(token.word, previous, before_previous, stack, new_line)
+    in_alias = starts_alias(token.word, previous, new_line, in_alias)
+    apply(token.word, previous, before_previous, stack, new_line, in_alias)
     if #stack == before and AMBIGUOUS_OPENERS[token.word] then
       out[token.start] = true
     end
